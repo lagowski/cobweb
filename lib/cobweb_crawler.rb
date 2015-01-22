@@ -11,7 +11,8 @@ class CobwebCrawler
     @options = options
     
     @statistic = {}
-    
+
+    @max_element_counter = @options[:max_element_counter]
     @options[:redis_options] = {:host => "127.0.0.1"} unless @options.has_key? :redis_options
     if @options.has_key? :crawl_id
       @crawl_id = @options[:crawl_id]
@@ -109,15 +110,19 @@ class CobwebCrawler
             internal_links.reject!{|link| @redis.sismember("crawled", link)}
             internal_links.reject!{|link| @redis.sismember("queued", link)}
             internal_links.reject!{|link| link.nil? || link.empty?}
-          
+
+            @element_counter ||= 0
             internal_links.each do |link|
-              puts "Added #{link.to_s} to queue" if @debug
-              @redis.sadd "queued", link unless link.nil?
-              children = @redis.hget("navigation", url)
-              children = [] if children.nil?
-              children << link
-              @redis.hset "navigation", url, children
-              @queue_counter += 1
+              if !@max_element_counter ||(@element_counter < @max_element_counter)
+                puts "Added #{link.to_s} to queue" if @debug
+                @redis.sadd "queued", link unless link.nil?
+                children = @redis.hget("navigation", url)
+                children = [] if children.nil?
+                children << link
+                @redis.hset "navigation", url, children
+                @queue_counter += 1
+                @element_counter += 1
+              end
             end
 
             if @options[:store_inbound_links]

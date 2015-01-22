@@ -220,6 +220,7 @@ class Cobweb
           end
           content[:length] = response.content_length
           content[:text_content] = text_content?(content[:mime_type])
+
           if text_content?(content[:mime_type])
             if response["Content-Encoding"]=="gzip"
               content[:body] = Zlib::GzipReader.new(StringIO.new(response.body)).read
